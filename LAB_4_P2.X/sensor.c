@@ -10,7 +10,7 @@
 #include <xc.h>
 #include <math.h>
 
-int scanLineSensors(int result, int d_mode, int turnCount){
+int scanLineSensors(int result, int display){
     
     int ADC_V1 = 0, ADC_V2 = 0, ADC_V3 = 0;
     int SR1 = 0, SR2 = 0, SR3 = 0;
@@ -23,7 +23,7 @@ int scanLineSensors(int result, int d_mode, int turnCount){
         ADC_V3 = floor((ADC1BUF2 + ADC1BUF5 + ADC1BUF8 + ADC1BUFB + ADC1BUFE)/5.0);
         IFS0bits.AD1IF = 0;
         
-        displayLineSensors(ADC_V1, ADC_V2, ADC_V3, d_mode, turnCount);
+        if(display) displayLineSensors(ADC_V1, ADC_V2, ADC_V3);
     
         v_k1 = (3.3/1023.0)*ADC_V1;
         v_k2 = (3.3/1023.0)*ADC_V2;
@@ -39,7 +39,7 @@ int scanLineSensors(int result, int d_mode, int turnCount){
     return result;
 }
 
-void displayLineSensors(int s1, int s2, int s3, int d_mode, int turnCount){
+void displayLineSensors(int s1, int s2, int s3){
     
     char *string1[19],*string2[19];
     float v_k1 = 0.0, v_k2 = 0.0, v_k3 = 0.0;;
@@ -57,12 +57,9 @@ void displayLineSensors(int s1, int s2, int s3, int d_mode, int turnCount){
     if(v_k2 <= DETECTION_LIMIT_2) L2 = 1;
     if(v_k3 <= DETECTION_LIMIT_3) L3 = 1;
     
-    if(!d_mode){
-        sprintf(string2," %i   %i   %i",L1, L2, L3);
-    }else{
-        sprintf(string2,"D-LOOP MODE %2i", turnCount);
-    }
-        printStringLCD(string2);
+    sprintf(string2," %i   %i   %i",L1, L2, L3);
+
+    printStringLCD(string2);
     
 }
 

@@ -19,7 +19,7 @@ void initADC(){
     TRIS_RA6_VRP = INPUT;
     
     ANSELA = 0x0060; //set ALL A to digital except for RA6 and RA7
-    ANSELB = 0x0000; //set all B to digital except for RB5,RB3,RB1
+    ANSELB = 0x0000; //set all B to digital except for RB15,RB3,RB1
     ANSELBbits.ANSB15 = 1;
     ANSELBbits.ANSB3 = 1;
     ANSELBbits.ANSB1 = 1;

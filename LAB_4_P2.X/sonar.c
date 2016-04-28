@@ -7,7 +7,7 @@
 #include "sonar.h"
 
 void initSonar(){
-    
+    //FOR TRIGGER PINS
     DIGITAL_RE6 = OUTPUT;  //PIN 6 J10
     DIGITAL_RD4 = OUTPUT;  //PIN 14 J10
     DIGITAL_RD10 = OUTPUT; //PIN 16 J10
@@ -31,21 +31,21 @@ void initSonar(){
     IFS1bits.CNFIF = 0;                 // Put down the flag
     IPC8bits.CNIP = 7;                  // Configure interrupt priority
     IPC8bits.CNIS = 3;                  // Configure the interrupt sub-priority
-    IEC1bits.CNFIE = DISABLED;           // Enable interrupt for A pins
+    IEC1bits.CNFIE = DISABLED;           // Enable interrupt for F pins
     
-    //FOR ECHO_3 INPUT PIN 7 ON J5
-    DIGITAL_RA0 = INPUT;                // Configure PIN as input
-    CNCONAbits.ON = 1;                  // Enable overall interrupt
-    CNENAbits.CNIEA0 = ENABLED;         // Enable pin CN
-    CNPUAbits.CNPUA0 = DISABLED;        // Enable pull-up resistor
-    IFS1bits.CNAIF = 0;                 // Put down the flag
+    //FOR ECHO_3 INPUT PIN 5 RG1 ON J11
+    DIGITAL_RG1 = INPUT;                // Configure PIN as input
+    CNCONGbits.ON = 1;                  // Enable overall interrupt
+    CNENGbits.CNIEG1 = ENABLED;         // Enable pin CN
+    CNPUGbits.CNPUG1 = DISABLED;        // Enable pull-up resistor
+    IFS1bits.CNGIF = 0;                 // Put down the flag
     IPC8bits.CNIP = 7;                  // Configure interrupt priority
     IPC8bits.CNIS = 3;                  // Configure the interrupt sub-priority
-    IEC1bits.CNAIE = DISABLED;           // Enable interrupt for A pins
+    IEC1bits.CNGIE = DISABLED;           // Enable interrupt for G pins
 
 }
 
-int sonarSweep(){
+int sonarSweep(int AVOID){
     
     int t1 = 0, t2 = 0, t3 = 0;
     int sonarResult = 0;
@@ -55,11 +55,12 @@ int sonarSweep(){
     t2 = performEcho(2); delaySec(BUFFER_TIME);
     t3 = performEcho(3); delaySec(BUFFER_TIME);
     
-    sonarResult = sonarAssess(t1, t2, t3);
+    sonarResult = sonarAssess(t1, t2, t3, AVOID);
     
     proximityResult = proximityCheck(sonarResult, 1);
     
-    return proximityResult;
+    if(!AVOID) return proximityResult;
+    else return sonarResult;  //0xLLMMRR
 }
 
 int performEcho(int sensor){
@@ -81,12 +82,12 @@ int performEcho(int sensor){
         echoTrack2 = ECHO_2;
         IFS1bits.CNFIF = 0; //reset flag
     }else if(sensor == 3){
-        IFS1bits.CNAIF = 0;           //reset flag
+        IFS1bits.CNGIF = 0;           //reset flag
         TRIGGER_S3 = ENABLED; delayUs(TRIGGER_TIME); TRIGGER_S3 = DISABLED;
-        while(IFS1bits.CNAIF == 0);  //wait for echo
+        while(IFS1bits.CNGIF == 0);  //wait for echo
         echoTrack3 = ECHO_3;
-        IFS1bits.CNAIF = 0; //reset flag
-    }
+        IFS1bits.CNGIF = 0;         //reset flag
+    }else return 0;
     
     //START TIMING HIGH TIME OF ECHO
     startTimer(); 
@@ -110,7 +111,7 @@ int performEcho(int sensor){
             if(elapsed >= 2) break;
         }; //time until echo pulse ends
     }else {
-         while((IFS1bits.CNAIF == 0) || ECHO_3){
+         while((IFS1bits.CNGIF == 0) || ECHO_3){
             if(IFS0bits.T1IF == 1){
                 elapsed++;
                 TMR1 = 0;
@@ -126,13 +127,13 @@ int performEcho(int sensor){
     
     IFS1bits.CNCIF = 0; //reset flag
     IFS1bits.CNFIF = 0; //reset flag
-    IFS1bits.CNAIF = 0; //reset flag
+    IFS1bits.CNGIF = 0; //reset flag
     
     return time; //returns time in micro-seconds
 }
 
 
-int sonarAssess(int t1, int t2, int t3){
+int sonarAssess(int t1, int t2, int t3, int AVOID){
     
     char *string1[19];
     float dist_1 = 0.0, dist_2 = 0.0, dist_3 = 0.0;
@@ -142,15 +143,28 @@ int sonarAssess(int t1, int t2, int t3){
     dist_2 = (((t2/1000000.0)*340)/2)*100.0; //calculate distance in cm
     dist_3 = (((t3/1000000.0)*340)/2)*100.0; //calculate distance in cm
     
-    //clearLCD();
+    clearLCD();
     moveCursorLCD(1,1);
     sprintf(string1,"%4.0f %4.0f %4.0f", dist_1, dist_2, dist_3);
     printStringLCD(string1);
     
-    if(dist_1 <= 20) sonarResult = sonarResult + 4;
-    if(dist_2 <= 20) sonarResult = sonarResult + 2;
-    if(dist_3 <= 20) sonarResult = sonarResult + 1;
-    
+    if(!AVOID){
+        if(dist_1 <= CRITICAL_LEFT) sonarResult = sonarResult + 4;
+        if(dist_2 <= CRITICAL_FRONT) sonarResult = sonarResult + 2;
+        if(dist_3 <= CRITICAL_RIGHT) sonarResult = sonarResult + 1;
+    }else{
+        if((dist_1 <= (CRITICAL_LEFT + BUFFER_REGION)) 
+           && (dist_1 >= (CRITICAL_LEFT - BUFFER_REGION))){ 
+            sonarResult = sonarResult + 4;
+        }
+        if(dist_2 <= CRITICAL_FRONT){
+            sonarResult = sonarResult + 2;
+        }
+        if((dist_3 <= (CRITICAL_RIGHT + BUFFER_REGION)) 
+           && (dist_3 >= (CRITICAL_RIGHT - BUFFER_REGION))) {
+            sonarResult = sonarResult + 1;
+        }
+    }
     return sonarResult;
 }
 
@@ -179,4 +193,17 @@ int proximityCheck(int sonarResult, int display){
     }
     
     return proximityStatus;
+}
+
+//Get distance of single from a single sensor
+int getDistance(int sensor){
+    
+    int time = 0;
+    int distance = 0; //cm
+    
+    time = performEcho(sensor);
+    
+    distance = (((time/1000000.0)*340)/2)*100.0; //calculate distance in cm
+    
+    return distance;
 }

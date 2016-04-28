@@ -16,7 +16,7 @@
 #define DIGITAL_RD4 TRISDbits.TRISD4 
 #define DIGITAL_RD10 TRISDbits.TRISD10 
 #define DIGITAL_RC1 TRISCbits.TRISC1
-#define DIGITAL_RA0 TRISAbits.TRISA0 
+#define DIGITAL_RG1 TRISGbits.TRISG1  //RA0
 #define DIGITAL_RF1 TRISFbits.TRISF1 
 
 #define TRIGGER_S1 LATEbits.LATE6
@@ -24,15 +24,22 @@
 #define TRIGGER_S3 LATDbits.LATD10
 #define ECHO_1 PORTCbits.RC1
 #define ECHO_2 PORTFbits.RF1
-#define ECHO_3 PORTAbits.RA0
+#define ECHO_3 PORTGbits.RG1    //RA0
 
 #define ENABLED 1
 #define DISABLED 0
 
-#define BUFFER_TIME 0.005    //seconds
+#define BUFFER_TIME 0.001     //seconds
 #define TRIGGER_TIME 12       //micro-seconds
 
-//SONAR RESULT DEFINES FORMAT 1 1XXX
+//SONAR CRITICAL DISTANCE TO OBSTACLE IN CM
+#define CRITICAL_LEFT 22
+#define CRITICAL_FRONT 20
+#define CRITICAL_RIGHT 22
+
+#define BUFFER_REGION 10             //IN CM
+
+//SONAR RESULT DEFINES FORMAT 11XXX
 #define CLEAR 24                //1 1000
 #define BLOCKED_RIGHT 25        //1 1001
 #define BLOCKED_FRONT 26        //1 1010
@@ -44,13 +51,15 @@
 
 void initSonar();
 
-int sonarSweep();
+int sonarSweep(int AVOID);
 
 int performEcho(int sensor);
 
-int sonarAssess(int t1, int t2, int t3);
+int sonarAssess(int t1, int t2, int t3, int AVOID);
 
 int proximityCheck(int sonarResult, int display);
+
+int getDistance(int sensor);
 
 
 #endif	/* SONAR_H */

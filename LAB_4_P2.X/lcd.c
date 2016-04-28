@@ -143,7 +143,7 @@ void printStringLCD(const char* s) {
  */
 void clearLCD(){
     writeFourBits(0x00, 0, 0 , 0);
-    writeFourBits(0x01, 0, 1800 , 1);
+    writeFourBits(0x01, 0, 1500 , 1);
 }
 
 /*

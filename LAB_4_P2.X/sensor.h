@@ -12,9 +12,9 @@
 #define DETECTION_LIMIT_2 2.30
 #define DETECTION_LIMIT_3 2.40
 
-int scanLineSensors(int result, int d_mode, int turnCount);
+int scanLineSensors(int result, int display);
 
-void displayLineSensors(int s1, int s2, int s3, int d_mode, int turnCount);
+void displayLineSensors(int s1, int s2, int s3);
 
 #endif	/* SENSOR_H */
 

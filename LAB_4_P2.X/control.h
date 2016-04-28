@@ -8,7 +8,8 @@
 #ifndef CONTROL_H
 #define	CONTROL_H
 
-#include "pwm.h"  
+#include "pwm.h"
+#include "sonar.h"
 
 #define MAX 1.00
 #define FAST 0.90
@@ -32,9 +33,7 @@ int assessLinePosition(unsigned int scanResult);
 //and 0.500 seconds
 void driveCommand(int command, float throttle, float duration, int off_cnt, int on_cnt);
 
-void dLoopProtocol(int command, float throttle, int off_cnt, int on_cnt, int turn_cnt);
-
-void turnCommand(int rotation, float throttle, int degrees);
+int avoidanceProtocol(int sonarResult, int command, int INITIAL_DETECTION);
 
 #endif	/* CONTROL_H */
 

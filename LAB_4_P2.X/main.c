@@ -27,7 +27,7 @@
 
 
 typedef enum stateTypeEnum{
-    INITIAL, WAIT, STOP, SCAN, ASSESS, FOLLOW, D_LOOP
+    INITIAL, WAIT, STOP, SCAN, ASSESS, FOLLOW, AVOID
 } stateType;
 
 void initialProcess();
@@ -47,92 +47,70 @@ int main(void)
     //CALL INITIALIZATION FUNCTION
     initialProcess();
    
-    int TEMP = 0, result = 0, command = IDLE;
+    int TEMP = 0, result = 0, sonarResult = 0, command = IDLE;
     int off_cnt = 0, on_cnt = 0;
-    int prev_command = FORWARD;
-    int turn_cnt = 0; //tracks turn around
-    int loopDone = 0;
-    int D_MODE = 0;
-    printStringLCD("Ready!");
+    int prev_command = IDLE;
+    int steps = 0;
+    int BLOCKED = 0, INITIAL_DETECTION = 0;
+
     delaySec(1);
     while(1)
     {   
-          result = sonarSweep();
-//        if(SW1_pressed) delayMs(10); //Delay on switch press
-//        
-//        switch(state){
-//            case INITIAL:
-//                turnOnLED(0);
-//                delaySec(1);
-//                state = WAIT;
+        switch(state){
+            case INITIAL:
+                turnOnLED(0);
+                delaySec(1);
+                state = WAIT;
+            break;
+            case WAIT:
+                turnOnLED(result);
+                result = scanLineSensors(result, 1); //Scans ADC and displays sensor data
+                if(SW1_toggle){ state = SCAN; SW1_toggle = 0; delayMs(10);}
+            break;
+            case SCAN:
+                if(steps == 250) {
+                    sonarResult = sonarSweep(1); steps = 0;}
+                turnOnLED(result);
+                result = scanLineSensors(result, 0); //Scans ADC and displays sensor data
+                if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
+                else state = ASSESS;
+            break;
+            case ASSESS:
+                command = assessLinePosition(result);
+                if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
+                else state = FOLLOW;
+            break;
+            case FOLLOW:
+                steps++;
+                if(command == OFF_LINE){ 
+                    off_cnt++;
+                    driveCommand(prev_command, CRUISE, 0.001, off_cnt, on_cnt);
+                }else if(command == ALL_ON){
+                    on_cnt++;
+                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
+                }else { 
+                    off_cnt = 0; on_cnt = 0;
+                    if(on_cnt >= 55) on_cnt = 0;
+                    prev_command = command;
+                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
+                }
+                if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
+                else state = SCAN;
+            break;
+//            case AVOID:
+//                
 //            break;
-//            case WAIT:
-//                turnOnLED(result);
-//                result = scanLineSensors(result, D_MODE, turn_cnt); //Scans ADC and displays sensor data
-//                if(SW1_toggle){ state = SCAN; SW1_toggle = 0; delayMs(10);}
-//            break;
-//            case SCAN:
-//                turnOnLED(result);
-//                result = scanLineSensors(result, D_MODE, turn_cnt); //Scans ADC and displays sensor data
-//                if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
-//                else state = ASSESS;
-//            break;
-//            case ASSESS:
-//                command = assessLinePosition(result);
-//                if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
-//                else if(D_MODE == 1) state = D_LOOP;
-//                else state = FOLLOW;
-//            break;
-//            case FOLLOW:
-//                if(command == OFF_LINE){ 
-//                    off_cnt++;
-//                    driveCommand(prev_command, CRUISE, 0.001, off_cnt, on_cnt);
-//                }else if(command == ALL_ON){
-//                    on_cnt++;
-//                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
-//                }else { 
-//                    off_cnt = 0;
-//                    if(on_cnt == 55) turn_cnt++;
-//                    if(on_cnt >= 55) on_cnt = 0;
-//                    prev_command = command;
-//                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
-//                }
-//                if(turn_cnt == 1) {
-//                    on_cnt = 0; off_cnt = 0;
-//                    state = SCAN; D_MODE = 1;}
-//                else if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
-//                else state = SCAN;
-//            break;
-//            case D_LOOP:
-//                 if(command == OFF_LINE){ 
-//                    off_cnt++; 
-//                    //if(off_cnt == 75) turn_cnt++;
-//                    dLoopProtocol(prev_command, CRUISE, off_cnt, on_cnt, turn_cnt);
-//                }else if(command == ALL_ON){
-//                    on_cnt++;
-//                    if(on_cnt == 15) turn_cnt++;
-//                    dLoopProtocol(command, CRUISE, off_cnt, on_cnt, turn_cnt);
-//                }else { 
-//                    off_cnt = 0;
-//                    on_cnt = 0;
-//                    prev_command = command;
-//                    dLoopProtocol(command, CRUISE, off_cnt, on_cnt, turn_cnt);
-//                }
-//                 if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
-//                 else if(turn_cnt >= 5){ state = SCAN; D_MODE = 0;}
-//                 else state = SCAN; 
-//            break;
-//            case STOP:
-//                turnOnLED(0);
-//                turn_cnt = 0; off_cnt = 0; on_cnt = 0; D_MODE = 0;
-//                driveCommand(IDLE, SLOW, 0.001, 0, 0);
-//                clearLCD(); moveCursorLCD(1,1);
-//                printStringLCD("STOP");
-//                delaySec(5);
-//                clearLCD();
-//                state = WAIT;
-//            break;
-//        } 
+            case STOP:
+                turnOnLED(0);
+                off_cnt = 0; on_cnt = 0;
+                driveCommand(IDLE, SLOW, 0.001, 0, 0);
+                clearLCD(); moveCursorLCD(1,1);
+                printStringLCD("STOP");
+                delaySec(5);
+                clearLCD();
+                state = WAIT;
+            break;
+        } 
     }        
     return 0;
 }
@@ -143,7 +121,7 @@ void __ISR(_CHANGE_NOTICE_VECTOR, IPL7SRS) _CNInterrupt(void){
     PORTA;
     
     j = SW1; //RA7
-
+    
     //CHECK SW2 TOGGLE
     if(SW1 == pressed){
         SW1_pressed = 1;
@@ -152,9 +130,9 @@ void __ISR(_CHANGE_NOTICE_VECTOR, IPL7SRS) _CNInterrupt(void){
         SW1_toggle = 1;
         
     }
- 
     //RESET FLAGS
-    IFS1bits.CNAIF = 0; //FLAG DOWN                
+    IFS1bits.CNAIF = 0; //FLAG DOWN
+
 }
 
 void initialProcess(){
@@ -163,9 +141,9 @@ void initialProcess(){
     initTimer2();
     initLCD();
     delayMs(1);
-    //initSW();
-    //initADC();
-    //initPWM();
+    initSW();
+    initADC();
+    initPWM();
     initSonar();
     int i = 0;
     turnOnLED(0);
