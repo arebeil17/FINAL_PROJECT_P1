@@ -59,8 +59,7 @@ int sonarSweep(int AVOID){
     
     proximityResult = proximityCheck(sonarResult, 1);
     
-    if(!AVOID) return proximityResult;
-    else return sonarResult;  //0xLLMMRR
+    return proximityResult;
 }
 
 int performEcho(int sensor){

@@ -81,8 +81,8 @@ void updatePWM(float duty, int motor, int direction){
     }else if(motor == 2){
         OC3RS = floor(duty*1023);
     }else if(motor == 0){
-        OC1RS = floor(duty*1023);
-        OC3RS = floor(duty*1023);
+        OC1RS = floor(duty*1023); //RIGHT MOTOR
+        OC3RS = floor(duty*1023*OFFSET_LEFT); //LEFT MOTOR
     }
     if(direction == BACKWARD){
         ENABLE_L = 1; ENABLE_R = 1;
@@ -101,7 +101,8 @@ void updatePWM(float duty, int motor, int direction){
         MAP_L1_OC3 = OC3;//fix
         MAP_L2_OC3 = 0;
     }else if(direction == LEFT){
-        ENABLE_L = 0; ENABLE_R = 1;
+        OC3RS = floor(duty*1023*OFFSET_TURN); //LEFT MOTOR
+        ENABLE_L = 1; ENABLE_R = 1;           //LEFT MOTOR PREVIOUSLY DISABLED
         MCG_L1 = DISABLE_ODC; MCG_R1 = DISABLE_ODC;
         MCG_L2 = ENABLE_ODC;  MCG_R2 = ENABLE_ODC;
         MAP_R1_OC1 = OC1;
@@ -109,7 +110,8 @@ void updatePWM(float duty, int motor, int direction){
         MAP_L1_OC3 = OC3;
         MAP_L2_OC3 = 0;
     }else if(direction == RIGHT){
-        ENABLE_L = 1; ENABLE_R = 0;
+        OC1RS = floor(duty*1023*OFFSET_TURN); //RIGHT MOTOR
+        ENABLE_L = 1; ENABLE_R = 1;           //RIGHT MOTOR PREVIOUSLY DISABLED
         MCG_L1 = DISABLE_ODC; MCG_R1 = DISABLE_ODC;
         MCG_L2 = ENABLE_ODC;  MCG_R2 = ENABLE_ODC;
         MAP_R1_OC1 = OC1;

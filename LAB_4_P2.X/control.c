@@ -10,11 +10,7 @@
 #include <xc.h>
 #include "leds.h"
 
-#define GOOD 1
-#define FAIL 0
-#define LEFT_S1 1
-#define MIDDLE_S2 2
-#define RIGHT_S3 3
+
 
 int assessLinePosition(unsigned int scanResult){
     
@@ -40,7 +36,7 @@ void driveCommand(int command, float throttle, float duration, int off_cnt, int 
     int result = 7; //0b111
     
     if(duration > 0){
-        if((on_cnt < 55) && (off_cnt < 100)){
+        if((on_cnt < ON_LIMIT) && (off_cnt < OFF_LIMIT)){
             if(command == OFF_LEFT) direction = FLIP_CW; //WAS RIGHT
             else if(command == ON_LINE) direction = FORWARD;
             else if(command == ALMOST_OFF_LEFT) direction = FORWARD;  //RIGHT
@@ -52,29 +48,30 @@ void driveCommand(int command, float throttle, float duration, int off_cnt, int 
             //Executes specified drive command
             updatePWM(throttle, SYNC, direction);
             delaySec(duration);
-    }else if(off_cnt == 100) {
-        while(result != 2){ //0b010
-            result = scanLineSensors(result, 0);
-            turnOnLED(result);
-            if(iterations == 0) {
-                updatePWM(SLOW, SYNC, FLIP_CW);
-                delaySec(0.550);
-            }
-            iterations++; delayMs(1);
-            if(iterations > 100) break;
-       }
-            updatePWM(CRUISE, SYNC, IDLE);
-    }else if(on_cnt == 55){
+    }else if(off_cnt == OFF_LIMIT) {
+        if((command == ALMOST_OFF_RIGHT) || (command == OFF_RIGHT)) direction = FLIP_CCW;
+        else if((command == ALMOST_OFF_LEFT) || (command == OFF_LEFT)) direction = FLIP_CW;
         
         while(result != 2){ //0b010
             result = scanLineSensors(result, 0);
             turnOnLED(result);
             if(iterations == 0) {
                 updatePWM(SLOW, SYNC, FLIP_CW);
-                delaySec(0.550);
             }
-            iterations++; delayMs(1);
-            if(iterations > 100) break;
+            delayMs(1); iterations++;
+            if(iterations > 2000) break;
+       }
+            updatePWM(CRUISE, SYNC, IDLE);
+    }else if(on_cnt == ON_LIMIT){
+        
+        while(result != 2){ //0b010
+            result = scanLineSensors(result, 0);
+            turnOnLED(result);
+            if(iterations == 0) {
+                updatePWM(SLOW, SYNC, FLIP_CW);
+            }
+            delayMs(1); iterations++;
+            if(iterations > 2000) break;
        }
             updatePWM(CRUISE, SYNC, IDLE);
     }
@@ -82,14 +79,17 @@ void driveCommand(int command, float throttle, float duration, int off_cnt, int 
     }
 }
 
-int avoidanceProtocol(int sonarResult, int command, int INITIAL_DETECTION){
+int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int initResult){
     
     int newResult = 0;
     int initScenario = BLOCKED_FRONT;
     int resolve = BLOCKED_FRONT;
     int currentDist = 0;  //current distance
+    int command = IDLE;
+    int newPosition = 7; //0b111
+    int iterations = 0;
     
-    if(INITIAL_DETECTION){
+    if(INITIAL_DETECTION){               //PERFORM INITIAL DETECTION ROTATION
         
         if((sonarResult == BLOCKED_FAR) || (sonarResult == BLOCKED_FRONT)) 
         {   command = FLIP_CCW; 
@@ -99,29 +99,82 @@ int avoidanceProtocol(int sonarResult, int command, int INITIAL_DETECTION){
             resolve = BLOCKED_LEFT;
         }else return FAIL;
         
-        while(newResult != resolve){
-            updatePWM(SLOW, SYNC, command);
-            delayMs(1);
+        while(newResult != resolve){          //ROTATE UNTIL SIDE SENSOR DETECTS
+            updatePWM(SLOW, SYNC, command);   //OBJECT OR IF MAXIMUM TIME
+            delayMs(1); iterations++;         //EXCEEDED
             newResult = sonarSweep(1);
+            if(iterations >= 1500) break;
         }
-        updatePWM(SLOW, SYNC, IDLE);
-        return GOOD;
-    }else{
+        updatePWM(SLOW, SYNC, IDLE);          //STOP
+        
+        if(iterations < 1500) return GOOD;   //RETURN GOOD IF TURN ENDED WELL
+        else return FAIL;                    //ELSE RETURN FAIL STATUS
+        
+    }else if(position != OFF_LINE){     //CHECK IF BACK ON LINE
+        
+        if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT))
+        {   command = FLIP_CCW;
+        }else command = FLIP_CW;
+        
+        while(newPosition != 0){                       //MOVE UNTIL OFF LINE
+            newPosition = scanLineSensors(newPosition, 0);
+            turnOnLED(newPosition);
+            updatePWM(CRUISE, SYNC, FORWARD);
+            delayMs(1); iterations++;
+            if(iterations >= 200) break;
+        }
+        updatePWM(SLOW, SYNC, IDLE);                    //STOP
+        if(iterations >= 200) return FAIL;              //CHECK FAIL CONDITION
+        else iterations = 0;                            //ELSE RESET & CONTINUE
+                                                        //TO FINAL TURN
+        newPosition = scanLineSensors(newPosition, 0);
+        
+        while(newPosition != 2){ //0b010               //TURN UNTIL BACK ON LINE
+            newPosition = scanLineSensors(newPosition, 0);
+            turnOnLED(newPosition);
+            if(iterations == 0) {
+                updatePWM(SLOW, SYNC, command);
+            }
+            delayMs(1); iterations++;
+            if(iterations >= 1500) break;
+       }
+        updatePWM(SLOW, SYNC, IDLE);                  //STOP
+        if(iterations >= 1500) return FAIL;           //CHECK FAIL CONDITION
+        else return SUCCESS;                          //ELSE SUCCESS -> READY
+                                                      //TO RESUME LINE FOLLOWING
+    }else{ //ELSE MAINTAIN OBJECT WITHIN BUFFER REGION
+                
         if(sonarResult == BLOCKED_RIGHT){
             currentDist = getDistance(RIGHT_S3);
             if( currentDist <= (CRITICAL_RIGHT - BUFFER_REGION)) command = LEFT;
             else if(currentDist >= (CRITICAL_RIGHT + BUFFER_REGION)) command = RIGHT;
             else command = FORWARD;
-            
+            updatePWM(CRUISE, SYNC, command); delayMs(1);
         }else if(sonarResult == BLOCKED_LEFT){
             currentDist = getDistance(LEFT_S1);
             if( currentDist <= (CRITICAL_LEFT - BUFFER_REGION)) command = RIGHT;
             else if(currentDist >= (CRITICAL_LEFT + BUFFER_REGION)) command = LEFT;
             else command = FORWARD;
+            updatePWM(CRUISE, SYNC, command); delayMs(1);
         }else{
-            
-        }
+            //OBJECT WAS LOST ATTEMPT TO FIND AGAIN
+            if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT)){   
+                command = FLIP_CW; resolve = BLOCKED_RIGHT;
+            }else{
+                command = FLIP_CCW; resolve = BLOCKED_LEFT;
+            }
+             while(newResult != resolve){
+                updatePWM(SLOW, SYNC, command);
+                delayMs(1); iterations++;
+                newResult = sonarSweep(1);
+                if(iterations >= 1500) break;
+            }
+            updatePWM(SLOW, SYNC, IDLE);
         
+            if(iterations < 1500) return GOOD; //OBJECT FOUND AGAIN RETURN GOOD
+            else return FAIL;                  //OBJECT NOT FOUND RETURN FAIL
+        }
+        return GOOD; //COMMAND EXECUTED RETURN GOOD STATUS
     }
     
 }
