@@ -88,10 +88,8 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
     int command = IDLE;
     int newPosition = 7; //0b111
     int iterations = 0;
-<<<<<<< HEAD
     int sensor = FRONT_S2;
-=======
->>>>>>> origin/master
+
     
     if(INITIAL_DETECTION){               //PERFORM INITIAL DETECTION ROTATION
         
@@ -105,7 +103,6 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
         
         while(newResult != resolve){          //ROTATE UNTIL SIDE SENSOR DETECTS
             updatePWM(SLOW, SYNC, command);   //OBJECT OR IF MAXIMUM TIME
-<<<<<<< HEAD
             delayMs(5); iterations++;         //EXCEEDED
             newResult = sonarSweep(1);
             if(iterations >= 300) break;
@@ -130,32 +127,6 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
         }
         updatePWM(SLOW, SYNC, IDLE);                    //STOP
         if(iterations >= 400) return FAIL;              //CHECK FAIL CONDITION
-=======
-            delayMs(1); iterations++;         //EXCEEDED
-            newResult = sonarSweep(1);
-            if(iterations >= 1500) break;
-        }
-        updatePWM(SLOW, SYNC, IDLE);          //STOP
-        
-        if(iterations < 1500) return GOOD;   //RETURN GOOD IF TURN ENDED WELL
-        else return FAIL;                    //ELSE RETURN FAIL STATUS
-        
-    }else if(position != OFF_LINE){     //CHECK IF BACK ON LINE
-        
-        if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT))
-        {   command = FLIP_CCW;
-        }else command = FLIP_CW;
-        
-        while(newPosition != 0){                       //MOVE UNTIL OFF LINE
-            newPosition = scanLineSensors(newPosition, 0);
-            turnOnLED(newPosition);
-            updatePWM(CRUISE, SYNC, FORWARD);
-            delayMs(1); iterations++;
-            if(iterations >= 200) break;
-        }
-        updatePWM(SLOW, SYNC, IDLE);                    //STOP
-        if(iterations >= 200) return FAIL;              //CHECK FAIL CONDITION
->>>>>>> origin/master
         else iterations = 0;                            //ELSE RESET & CONTINUE
                                                         //TO FINAL TURN
         newPosition = scanLineSensors(newPosition, 0);
@@ -174,18 +145,13 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
         else return SUCCESS;                          //ELSE SUCCESS -> READY
                                                       //TO RESUME LINE FOLLOWING
     }else{ //ELSE MAINTAIN OBJECT WITHIN BUFFER REGION
-<<<<<<< HEAD
-        
-        if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT)){
-=======
-                
-        if(sonarResult == BLOCKED_RIGHT){
->>>>>>> origin/master
+	
+        if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT)){       
+        //if(sonarResult == BLOCKED_RIGHT){
             currentDist = getDistance(RIGHT_S3);
             if( currentDist <= (CRITICAL_RIGHT - BUFFER_REGION)) command = LEFT;
             else if(currentDist >= (CRITICAL_RIGHT + BUFFER_REGION - 3)) command = RIGHT;
             else command = FORWARD;
-<<<<<<< HEAD
             if(sonarResult == BLOCKED_FRONT) {
                 updatePWM(SLOW, SYNC, BACKWARD);
                 delaySec(0.750);
@@ -195,15 +161,10 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
             }
             
         }else if((initResult == BLOCKED_LAF)){
-=======
-            updatePWM(CRUISE, SYNC, command); delayMs(1);
-        }else if(sonarResult == BLOCKED_LEFT){
->>>>>>> origin/master
             currentDist = getDistance(LEFT_S1);
             if( currentDist <= (CRITICAL_LEFT - BUFFER_REGION)) command = RIGHT;
             else if(currentDist >= (CRITICAL_LEFT + BUFFER_REGION - 3)) command = LEFT;
             else command = FORWARD;
-<<<<<<< HEAD
             if(sonarResult == BLOCKED_FRONT) {
                 updatePWM(SLOW, SYNC, BACKWARD);
                 delaySec(0.750);
@@ -213,33 +174,9 @@ int avoidanceProtocol(int sonarResult, int position, int INITIAL_DETECTION, int 
             }
         }
          updatePWM(SLOW, SYNC, command); delayMs(1);
+		 return GOOD; //COMMAND EXECUTED RETURN GOOD STATUS
+		}
 
-            return GOOD; //COMMAND EXECUTED RETURN GOOD STATUS
-        }
-=======
-            updatePWM(CRUISE, SYNC, command); delayMs(1);
-        }else{
-            //OBJECT WAS LOST ATTEMPT TO FIND AGAIN
-            if((initResult == BLOCKED_FAR) || (initResult == BLOCKED_FRONT)){   
-                command = FLIP_CW; resolve = BLOCKED_RIGHT;
-            }else{
-                command = FLIP_CCW; resolve = BLOCKED_LEFT;
-            }
-             while(newResult != resolve){
-                updatePWM(SLOW, SYNC, command);
-                delayMs(1); iterations++;
-                newResult = sonarSweep(1);
-                if(iterations >= 1500) break;
-            }
-            updatePWM(SLOW, SYNC, IDLE);
-        
-            if(iterations < 1500) return GOOD; //OBJECT FOUND AGAIN RETURN GOOD
-            else return FAIL;                  //OBJECT NOT FOUND RETURN FAIL
-        }
-        return GOOD; //COMMAND EXECUTED RETURN GOOD STATUS
-    }
-    
->>>>>>> origin/master
 }
   
 

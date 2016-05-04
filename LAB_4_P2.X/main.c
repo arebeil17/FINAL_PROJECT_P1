@@ -47,17 +47,10 @@ int main(void)
     //CALL INITIALIZATION FUNCTION
     initialProcess();
    
-<<<<<<< HEAD
     int TEMP = 0, result = 0, sonarResult = CLEAR, command = IDLE;
     int position = OFF_LINE;
     int off_cnt = 0, on_cnt = 0;
     int prev_position = OFF_LINE;
-=======
-    int TEMP = 0, result = 0, sonarResult = 0, command = IDLE;
-    int position = OFF_LINE;
-    int off_cnt = 0, on_cnt = 0;
-    int prev_position = IDLE;
->>>>>>> origin/master
     int steps = 0;
     int BLOCKED = 0, INITIAL_DETECTION = 0;
     int avoid_cnt = 0, status = FAIL, prev_status = FAIL;
@@ -84,11 +77,8 @@ int main(void)
                 if(SW1_toggle){ state = SCAN; SW1_toggle = 0; delayMs(10);}
             break;
             case SCAN:
-<<<<<<< HEAD
+
                 if((steps == 250) || BLOCKED) {
-=======
-                if((steps == 500) || BLOCKED) {
->>>>>>> origin/master
                     sonarResult = sonarSweep(BLOCKED); steps = 0;}
                 turnOnLED(result);
                 result = scanLineSensors(result, 0); //Scans ADC and do not display sensor data
@@ -128,16 +118,11 @@ int main(void)
             break;
             case AVOID:
                status = avoidanceProtocol(sonarResult, position, INITIAL_DETECTION, initSonarResult);
-<<<<<<< HEAD
                if(status == GOOD) { state = SCAN; BLOCKED = 1; sonarResult = sonarSweep(BLOCKED);}
                else if(status == FAIL) { state = STOP; BLOCKED = 0;}
                else if(status == SUCCESS) 
                { state = SCAN; BLOCKED = 0; steps = 0; sonarResult = CLEAR;}
-=======
-               if(status == GOOD) state = SCAN;
-               else if(status == FAIL) { state = STOP; BLOCKED = 0;}
-               else if(status == SUCCESS) { state = SCAN; BLOCKED = 0; steps = 0;}
->>>>>>> origin/master
+
             break;
             case STOP:
                 turnOnLED(0);
