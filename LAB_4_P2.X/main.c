@@ -27,7 +27,7 @@
 
 
 typedef enum stateTypeEnum{
-    INITIAL, WAIT, STOP, SCAN, ASSESS, FOLLOW, AVOID
+    INITIAL, WAIT, WAIT_2, STOP, SCAN, ASSESS, FOLLOW, AVOID
 } stateType;
 
 void initialProcess();
@@ -47,11 +47,14 @@ int main(void)
     //CALL INITIALIZATION FUNCTION
     initialProcess();
    
-    int TEMP = 0, result = 0, sonarResult = 0, command = IDLE;
+    int TEMP = 0, result = 0, sonarResult = CLEAR, command = IDLE;
+    int position = OFF_LINE;
     int off_cnt = 0, on_cnt = 0;
-    int prev_command = IDLE;
+    int prev_position = OFF_LINE;
     int steps = 0;
     int BLOCKED = 0, INITIAL_DETECTION = 0;
+    int avoid_cnt = 0, status = FAIL, prev_status = FAIL;
+    int initSonarResult = CLEAR;
 
     delaySec(1);
     while(1)
@@ -65,44 +68,65 @@ int main(void)
             case WAIT:
                 turnOnLED(result);
                 result = scanLineSensors(result, 1); //Scans ADC and displays sensor data
+                if(SW1_toggle){ state = WAIT_2; SW1_toggle = 0; delayMs(10);}
+            break;
+            case WAIT_2:
+                turnOnLED(result);
+                result = scanLineSensors(result, 0); //Scans ADC and displays sensor data
+                sonarResult = sonarSweep(BLOCKED);
                 if(SW1_toggle){ state = SCAN; SW1_toggle = 0; delayMs(10);}
             break;
             case SCAN:
-                if(steps == 250) {
-                    sonarResult = sonarSweep(1); steps = 0;}
+                if((steps == 250) || BLOCKED) {
+                    sonarResult = sonarSweep(BLOCKED); steps = 0;}
                 turnOnLED(result);
-                result = scanLineSensors(result, 0); //Scans ADC and displays sensor data
+                result = scanLineSensors(result, 0); //Scans ADC and do not display sensor data
                 if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
                 else state = ASSESS;
             break;
             case ASSESS:
-                command = assessLinePosition(result);
+                position = assessLinePosition(result);
+                if((sonarResult != CLEAR) || BLOCKED) {
+                    if(!avoid_cnt) {
+                        INITIAL_DETECTION = 1; 
+                        initSonarResult = sonarResult;
+                        updatePWM(SLOW, SYNC, IDLE);
+                    }else INITIAL_DETECTION = 0;
+                    BLOCKED = 1; avoid_cnt++;
+                }else BLOCKED = 0;
+                
                 if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
+                else if(BLOCKED) state = AVOID;
                 else state = FOLLOW;
             break;
             case FOLLOW:
                 steps++;
-                if(command == OFF_LINE){ 
+                if(position == OFF_LINE){ 
                     off_cnt++;
-                    driveCommand(prev_command, CRUISE, 0.001, off_cnt, on_cnt);
-                }else if(command == ALL_ON){
+                    driveCommand(prev_position, CRUISE, 0.001, off_cnt, on_cnt);
+                }else if(position == ALL_ON){
                     on_cnt++;
-                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
+                    driveCommand(position, CRUISE, 0.001, off_cnt, on_cnt);
                 }else { 
                     off_cnt = 0; on_cnt = 0;
-                    if(on_cnt >= 55) on_cnt = 0;
-                    prev_command = command;
-                    driveCommand(command, CRUISE, 0.001, off_cnt, on_cnt);
+                    if(position != ON_LINE) prev_position = position;
+                    driveCommand(position, CRUISE, 0.001, off_cnt, on_cnt);
                 }
                 if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
                 else state = SCAN;
             break;
-//            case AVOID:
-//                
-//            break;
+            case AVOID:
+               status = avoidanceProtocol(sonarResult, position, INITIAL_DETECTION, initSonarResult);
+               if(status == GOOD) { state = SCAN; BLOCKED = 1; sonarResult = sonarSweep(BLOCKED);}
+               else if(status == FAIL) { state = STOP; BLOCKED = 0;}
+               else if(status == SUCCESS) 
+               { state = SCAN; BLOCKED = 0; steps = 0; sonarResult = CLEAR;}
+            break;
             case STOP:
                 turnOnLED(0);
-                off_cnt = 0; on_cnt = 0;
+                off_cnt = 0; on_cnt = 0; avoid_cnt = 0; INITIAL_DETECTION = 0;
+                steps = 0;
+                BLOCKED = 0;
                 driveCommand(IDLE, SLOW, 0.001, 0, 0);
                 clearLCD(); moveCursorLCD(1,1);
                 printStringLCD("STOP");

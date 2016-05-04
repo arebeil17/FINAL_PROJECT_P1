@@ -84,6 +84,8 @@ int stopTimer(){
     T1CONbits.TCKPS = prescalar_8_T1; //reset pre-scalar back to 8
     IFS0bits.T1IF = 0;
     
-    return time/10;            //RETUEN ELAPSED TIME
+    time = time/10;
+    
+    return time;            //RETURN ELAPSED TIME
 }
 

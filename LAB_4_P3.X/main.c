@@ -67,9 +67,11 @@ int main(void)
                 if(SW1_toggle){ state = SCAN; SW1_toggle = 0; delayMs(10);}
             break;
             case SCAN:
-                //if(steps == 250) {sonarResult = sonarSweep(); steps = 0;}
+                if(steps == 250) {
+                    //sonarResult = sonarSweep(); 
+                    steps = 0;}
                 turnOnLED(result);
-                result = scanLineSensors(result, 1); //Scans ADC and displays sensor data
+                result = scanLineSensors(result, 0); //Scans ADC and displays sensor data
                 if(SW1_toggle){ state = STOP; SW1_toggle = 0; delayMs(10);}
                 else state = ASSESS;
             break;
@@ -79,7 +81,7 @@ int main(void)
                 else state = FOLLOW;
             break;
             case FOLLOW:
-                //steps++;
+                steps++;
                 if(command == OFF_LINE){ 
                     off_cnt++;
                     driveCommand(prev_command, CRUISE, 0.001, off_cnt, on_cnt);
@@ -139,7 +141,7 @@ void initialProcess(){
     initSW();
     initADC();
     initPWM();
-    initSonar();
+    //initSonar();
     int i = 0;
     turnOnLED(0);
     for(i = 0; i < 20; i++) delayMs(50);

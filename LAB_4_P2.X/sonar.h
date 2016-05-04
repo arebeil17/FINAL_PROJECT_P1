@@ -29,15 +29,21 @@
 #define ENABLED 1
 #define DISABLED 0
 
-#define BUFFER_TIME 0.001     //seconds
-#define TRIGGER_TIME 12       //micro-seconds
+//DEFINES FOR ECHO TIMING
+#define BUFFER_TIME 0.005     //seconds
+#define TRIGGER_TIME 13       //micro-seconds
+#define TOTAL_ELAPSED_TIME 13107 //micro-seconds
+#define CHECK_TIME 1           //mirco-seconds
+#define ELAPSED_CNT 2
+#define CHANGE 1500
 
 //SONAR CRITICAL DISTANCE TO OBSTACLE IN CM
-#define CRITICAL_LEFT 22
-#define CRITICAL_FRONT 20
-#define CRITICAL_RIGHT 22
+#define CRITICAL_LEFT 27
+#define CRITICAL_FRONT 22
+#define CRITICAL_RIGHT 27
 
-#define BUFFER_REGION 10             //IN CM
+#define BUFFER_REGION 15             //IN CM
+
 
 //SONAR RESULT DEFINES FORMAT 11XXX
 #define CLEAR 24                //1 1000
@@ -60,6 +66,8 @@ int sonarAssess(int t1, int t2, int t3, int AVOID);
 int proximityCheck(int sonarResult, int display);
 
 int getDistance(int sensor);
+
+int getTime(int sensor);
 
 
 #endif	/* SONAR_H */

@@ -53,8 +53,9 @@
 #define MCG_L1 LATEbits.LATE2 //RIGHT MOTOR GROUND 1
 #define MCG_L2 LATBbits.LATB13 //RIGHT MOTOR GROUND 2
 //DEFINES USED FOR MOTOR CALIBRATION
-#define OFFSET_LEFT 0.90            //FINE TUNE LEFT MOTORS DUTY CYCLE
-#define OFFSET_RIGHT 0.90           //FINE TUNE RIGHT MOTORS DUTY CYCLE
+#define OFFSET_LEFT 0.985            //FINE TUNE LEFT MOTORS DUTY CYCLE
+#define OFFSET_RIGHT 1.00           //FINE TUNE RIGHT MOTORS DUTY CYCLE
+#define OFFSET_TURN 0.85
 
 //Initializes all relevant motor control registers
 void initMotorControl();

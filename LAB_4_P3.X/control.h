@@ -12,7 +12,7 @@
 
 #define MAX 1.00
 #define FAST 0.90
-#define CRUISE 0.75        
+#define CRUISE 0.80        
 #define SLOW 0.65
 
 #define OFF_LINE 10         //000
@@ -24,8 +24,8 @@
 #define ALMOST_OFF_RIGHT 16 //110
 #define ALL_ON 17           //111
 
-#define ON_LIMIT 500        // was 65
-#define OFF_LIMIT 50
+#define ON_LIMIT 800        // was 65
+#define OFF_LIMIT 125
 
 int assessLinePosition(unsigned int scanResult);
 

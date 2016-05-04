@@ -8,9 +8,9 @@
 #ifndef SENSOR_H
 #define	SENSOR_H
 
-#define DETECTION_LIMIT_1 2.30
-#define DETECTION_LIMIT_2 2.30
-#define DETECTION_LIMIT_3 2.40
+#define DETECTION_LIMIT_1 2.40
+#define DETECTION_LIMIT_2 2.50
+#define DETECTION_LIMIT_3 2.50
 
 int scanLineSensors(int result, int display);
 

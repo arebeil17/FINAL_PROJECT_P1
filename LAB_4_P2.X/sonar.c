@@ -42,88 +42,122 @@ void initSonar(){
     IPC8bits.CNIP = 7;                  // Configure interrupt priority
     IPC8bits.CNIS = 3;                  // Configure the interrupt sub-priority
     IEC1bits.CNGIE = DISABLED;           // Enable interrupt for G pins
-
+    
+    TRIGGER_S1 = DISABLED;
+    TRIGGER_S2 = DISABLED;
+    TRIGGER_S3 = DISABLED;
 }
 
 int sonarSweep(int AVOID){
     
     int t1 = 0, t2 = 0, t3 = 0;
+    int temp1 = 0, temp2 = 0;
     int sonarResult = 0;
     int proximityResult = CLEAR;
     
-    t1 = performEcho(1); delaySec(BUFFER_TIME);
-    t2 = performEcho(2); delaySec(BUFFER_TIME);
-    t3 = performEcho(3); delaySec(BUFFER_TIME);
+    while(t1 == 0) {t1 = getTime(1); }
+    while(t2 == 0) {t2 = getTime(2); }
+    while(t3 == 0) {t3 = getTime(3); }
     
     sonarResult = sonarAssess(t1, t2, t3, AVOID);
     
     proximityResult = proximityCheck(sonarResult, 1);
     
-    if(!AVOID) return proximityResult;
-    else return sonarResult;  //0xLLMMRR
+    if((t1 + t2 + t3) > TOTAL_ELAPSED_TIME) delayMs(5);
+    
+    return proximityResult;
 }
 
+int getTime(int sensor){
+    
+    int time1 = 0;
+    int time2 = 0;
+    int validTime = 0;
+    
+    while(time1 == 0){
+        time1 = performEcho(sensor);
+        delayUs(300);
+    }
+    
+    while(time2 == 0){
+        time2 = performEcho(sensor);
+        delayUs(300);
+    }
+    
+    if(abs(time1 - time2) < CHANGE) validTime = (time1 + time2)/2;
+    
+    return validTime;
+}
 int performEcho(int sensor){
     
     int time = 0, elapsed = 0;
     int echoTrack1 = 0, echoTrack2 = 0, echoTrack3 = 0;
+    int delay = 0;
     
     //TRIGGER SPECIFIED SENSOR
-    if(sensor == 1) {
-        IFS1bits.CNCIF = 0;          //reset flag
+    if(sensor == 1) { IFS1bits.CNCIF = 0;
+        if(ECHO_1){
+            IFS1bits.CNCIF = 0;  return 0;} 
         TRIGGER_S1 = ENABLED; delayUs(TRIGGER_TIME); TRIGGER_S1 = DISABLED;
-        while(IFS1bits.CNCIF == 0);  //wait for echo
-        echoTrack1 = ECHO_1;
-        IFS1bits.CNCIF = 0;         //reset flag
-    }else if(sensor == 2){
-        IFS1bits.CNFIF = 0;          //reset flag
+        while(IFS1bits.CNCIF == 0 || !ECHO_1){ //wait for echo
+            delayUs(CHECK_TIME); delay++; if(delay > 100) return 0; 
+        }; //check for no echo
+        echoTrack1 = ECHO_1; IFS1bits.CNCIF = 0;         //reset flag
+    }else if(sensor == 2){ IFS1bits.CNFIF = 0; 
+        if(ECHO_2){ 
+            IFS1bits.CNFIF = 0;  return 0;}        //reset flag
         TRIGGER_S2 = ENABLED; delayUs(TRIGGER_TIME); TRIGGER_S2 = DISABLED;
-        while(IFS1bits.CNFIF == 0);  //wait for echo
-        echoTrack2 = ECHO_2;
-        IFS1bits.CNFIF = 0; //reset flag
-    }else if(sensor == 3){
-        IFS1bits.CNGIF = 0;           //reset flag
+        while(IFS1bits.CNFIF == 0 || !ECHO_2){//wait for echo
+            delayUs(CHECK_TIME); delay++; if(delay > 100) return 0; 
+        }; //check for no echo
+        echoTrack2 = ECHO_2; IFS1bits.CNFIF = 0; //reset flag
+    }else if(sensor == 3){ IFS1bits.CNGIF = 0;
+        if(ECHO_3){
+            IFS1bits.CNGIF = 0;  return 0;}        //reset flag 
         TRIGGER_S3 = ENABLED; delayUs(TRIGGER_TIME); TRIGGER_S3 = DISABLED;
-        while(IFS1bits.CNGIF == 0);  //wait for echo
-        echoTrack3 = ECHO_3;
-        IFS1bits.CNGIF = 0;         //reset flag
+        while(IFS1bits.CNGIF == 0 || !ECHO_3){//wait for echo
+            delayUs(CHECK_TIME); delay++; if(delay > 100) return 0; 
+        }; //check for no echo
+        echoTrack3 = ECHO_3; IFS1bits.CNGIF = 0;         //reset flag
     }else return 0;
     
     //START TIMING HIGH TIME OF ECHO
     startTimer(); 
    
     if(sensor == 1 ){
-        while((IFS1bits.CNCIF == 0) || ECHO_1){
+        while(ECHO_1){
             if(IFS0bits.T1IF == 1){
                 elapsed++;
                 TMR1 = 0;
                 IFS0bits.T1IF = 0;
             }
-            if(elapsed >= 2) break;
+            if(elapsed >= ELAPSED_CNT) break;
         }; //time until echo pulse ends
     }else if(sensor == 2 ){
-        while((IFS1bits.CNFIF == 0) || ECHO_2){
+        while(ECHO_2){
             if(IFS0bits.T1IF == 1){
                 elapsed++;
                 TMR1 = 0;
                 IFS0bits.T1IF = 0;
             }
-            if(elapsed >= 2) break;
+           if(elapsed >= ELAPSED_CNT) break;
         }; //time until echo pulse ends
-    }else {
-         while((IFS1bits.CNGIF == 0) || ECHO_3){
+    }else if(sensor == 3) {
+         while(ECHO_3){
             if(IFS0bits.T1IF == 1){
                 elapsed++;
                 TMR1 = 0;
                 IFS0bits.T1IF = 0;
             }
-            if(elapsed >= 2) break;
+            if(elapsed >= ELAPSED_CNT) break;  
         }; //time until echo pulse ends
     }
     //ECHO FINISHED STOP TIMER AND RECORD HIGH TIME
     time = stopTimer();
     
     if(elapsed > 0) time = time + (65535*elapsed)/10;
+    
+    //if(elapsed >= ELAPSED_CNT) delayMs(5);
     
     IFS1bits.CNCIF = 0; //reset flag
     IFS1bits.CNFIF = 0; //reset flag
@@ -201,7 +235,8 @@ int getDistance(int sensor){
     int time = 0;
     int distance = 0; //cm
     
-    time = performEcho(sensor);
+    //perform trigger and echo process until valid time returned
+    while(time == 0){ time = getTime(sensor);}
     
     distance = (((time/1000000.0)*340)/2)*100.0; //calculate distance in cm
     
