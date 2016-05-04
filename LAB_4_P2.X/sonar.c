@@ -63,8 +63,11 @@ int sonarSweep(int AVOID){
     
     proximityResult = proximityCheck(sonarResult, 1);
     
+<<<<<<< HEAD
     if((t1 + t2 + t3) > TOTAL_ELAPSED_TIME) delayMs(5);
     
+=======
+>>>>>>> origin/master
     return proximityResult;
 }
 
